@@ -4,10 +4,11 @@
 
 import csv
 import os
+import re
 import jieba
 
 file_dir = './WeiboScrapy/SampleData/'
-minSupportThreshold = 0.2
+minSupportThreshold = 0.02
 
 # 读取数据集，后面在apriori()中会处理成集合格式
 def loadDataSet(file_name):
@@ -19,9 +20,16 @@ def loadDataSet(file_name):
             # 获取每一行数据并处理
             line = row[5]
             line = line.strip()  #去前后的空格
-            line = re.sub(r"[0-9\s+\.\!\/_,$%^*()?;；:-【】+\"\']+|[+——！，;:。？、~@#￥%……&*（）]+",\
+            line = re.sub(r"[\s+\.\!\/_,$%^*()?;；:-【】+\"\']+|[+——！，;:。？、~@#￥%……&*（）]+",\
                 "", line) #去标点符号
-            dataSet.append(jieba.lcut(line))        
+            # 分词
+            segments = jieba.lcut(line)
+            # 预处理中无法清理干净的词
+            for i in range(len(segments)-1, -1, -1):
+                if segments[i] in ['原图','组图','的','了','张']:
+                    del segments[i]
+            dataSet.append(segments)  
+    return dataSet      
  
 # 将所有元素转换为frozenset型字典，存放到列表中
 def createC1(dataSet):
@@ -80,6 +88,7 @@ def apriori(dataSet, minSupport = 0.5):
     D = list(map(set, dataSet)) # 转换列表记录为集合  [{1, 3, 4}, {2, 3, 5}, {1, 2, 3, 5}, {2, 5}]
     C1 = createC1(dataSet)      # 将每个元素转会为frozenset集合
     L1, supportData = scanD(D, C1, minSupport)  # 过滤数据
+    print("L1 finished!")
     L = [L1]
     k = 2
     while (len(L[k-2]) > 0):    # 若仍有满足支持度的集合则继续
@@ -89,6 +98,7 @@ def apriori(dataSet, minSupport = 0.5):
             break
         supportData.update(supK)    # 更新字典（把新出现的集合:支持度加入到supportData中）
         L.append(Lk)
+        print("L", k, "finished!")
         k += 1  # 每次新组合的元素都只增加了一个，所以k也+1（k表示元素个数）
     return L, supportData
 
@@ -99,12 +109,14 @@ def main():
     for root, dirs, files in os.walk(file_dir):
         for _file in files:
             file_name = root + _file
-            print(_file)
             # 这里开始对目录下对每个文件进行操作
-            dateSet = loadDataSet(file_name)
+            dataSet = loadDataSet(file_name)
+            print(_file, "loaded!")
             # dataSet = testDataSet()     # for debug
             L, supportData = apriori(dataSet, minSupportThreshold)
-
+            patterns = [pattern for Lk in L for pattern in Lk]
+            for pattern in patterns:
+                print(tuple(pattern), supportData[pattern])
 
 if __name__ == '__main__':
     main()
