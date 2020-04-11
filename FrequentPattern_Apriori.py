@@ -58,35 +58,42 @@ def scanD(D, Ck, minSupport):
         supportData[key] = support
     return retList, supportData # 排除不符合支持度元素后的元素 每个元素支持度
  
-# 生成所有可以组合的集合
-# 频繁项集列表Lk 项集元素个数k  [frozenset({2, 3}), frozenset({3, 5})] -> [frozenset({2, 3, 5})]
+# 生成所有可以组合的元素个数为k的集合
+# 频繁项集列表Lk 项集元素个数实际上是k-1
 def aprioriGen(Lk, k):
     retList = []
     lenLk = len(Lk)
     for i in range(lenLk): # 两层循环比较Lk中的每个元素与其它元素
         for j in range(i+1, lenLk):
-            L1 = list(Lk[i])[:k-2]  # 将集合转为list后取值
-            L2 = list(Lk[j])[:k-2]
-            L1.sort(); L2.sort()        # 这里说明一下：该函数每次比较两个list的前k-2个元素，如果相同则求并集得到k个元素的集合
-            if L1==L2:
-                retList.append(Lk[i] | Lk[j]) # 求并集
+            set1 = Lk[i]
+            set2 = Lk[j]
+            union = set1 | set2 # 求并集
+            if len(list(union)) == k:
+                retList.append(Lk[i] | Lk[j])
+
+    retList = list(set(retList))    # 去重  
     return retList  # 返回频繁项集列表Ck
  
-# 封装所有步骤的函数
+# 主算法
 # 返回 所有满足大于阈值的组合 集合支持度列表
 def apriori(dataSet, minSupport = 0.5):
-    D = list(map(set, dataSet)) # 转换列表记录为字典  [{1, 3, 4}, {2, 3, 5}, {1, 2, 3, 5}, {2, 5}]
-    C1 = createC1(dataSet)      # 将每个元素转会为frozenset字典    [frozenset({1}), frozenset({2}), frozenset({3}), frozenset({4}), frozenset({5})]
+    D = list(map(set, dataSet)) # 转换列表记录为集合  [{1, 3, 4}, {2, 3, 5}, {1, 2, 3, 5}, {2, 5}]
+    C1 = createC1(dataSet)      # 将每个元素转会为frozenset集合
     L1, supportData = scanD(D, C1, minSupport)  # 过滤数据
     L = [L1]
     k = 2
-    while (len(L[k-2]) > 0):    # 若仍有满足支持度的集合则继续做关联分析
-        Ck = aprioriGen(L[k-2], k)  # Ck候选频繁项集
+    while (len(L[k-2]) > 0):    # 若仍有满足支持度的集合则继续
+        Ck = aprioriGen(L[k-2], k)  # Ck为k个元素的候选频繁项集
         Lk, supK = scanD(D, Ck, minSupport) # Lk频繁项集
+        if Lk == []:
+            break
         supportData.update(supK)    # 更新字典（把新出现的集合:支持度加入到supportData中）
         L.append(Lk)
         k += 1  # 每次新组合的元素都只增加了一个，所以k也+1（k表示元素个数）
     return L, supportData
+
+def testDataSet():
+    return [[1,3,4],[2,3,5],[1,2,3,5],[2,5]]
 
 def main():
     for root, dirs, files in os.walk(file_dir):
@@ -95,4 +102,9 @@ def main():
             print(_file)
             # 这里开始对目录下对每个文件进行操作
             dateSet = loadDataSet(file_name)
+            # dataSet = testDataSet()     # for debug
             L, supportData = apriori(dataSet, minSupportThreshold)
+
+
+if __name__ == '__main__':
+    main()

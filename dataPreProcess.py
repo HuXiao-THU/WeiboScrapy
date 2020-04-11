@@ -1,8 +1,8 @@
 import os
 import csv
 
-file_dir = './topic/'
-output_file = './weibo_data.csv'
+file_dir = './WeiboScrapy/topic/'
+output_file = './WeiboScrapy/SampleData/sample_开学.csv'
 
 def write_csv(write_list):
     """将筛选过的信息写入csv文件"""
