@@ -1,10 +1,10 @@
 import os
 import csv
 
-file_dir = './WeiboScrapy/topic/'
-output_file = './WeiboScrapy/SampleData/sample.csv'
+file_dir = './Weibo_data/topic'
+output_dir = './Weibo_data/processed_data'
 
-def write_csv(write_list):
+def write_csv(write_list, file):
     """将筛选过的信息写入csv文件"""
     try:
         result_headers = [
@@ -31,6 +31,8 @@ def write_csv(write_list):
             result_headers.insert(7, '原始用户')
         result_data = write_list
 
+        file_name = 'Clean_' + file
+        output_file = os.path.join(output_dir, file_name)
         fileExist = os.path.exists(output_file)
 
         with open(output_file, 'a', encoding='utf-8-sig', newline='') as f:
@@ -50,7 +52,7 @@ def main():
 
     for root, dirs, files in os.walk(file_dir):
         for _file in files:
-            file_name = root + _file
+            file_name = os.path.join(root, _file)
             print(_file)
             buffer_list = []
             with open(file_name, encoding='utf-8-sig') as csvfile:
@@ -69,9 +71,13 @@ def main():
                     titler = content.find('】')
                     if titlel != -1 or titler != -1:
                         continue
+                    titlel = content.find('『')
+                    titler = content.find('』')
+                    if titlel != -1 or titler != -1:
+                        continue
                     buffer_list.append(row)
                     count_temp += 1
-            write_csv(buffer_list)
+            write_csv(buffer_list, _file)
             print('effective rate = ', count_temp, '/', all_count_temp)
             count += count_temp
             all_count += all_count_temp

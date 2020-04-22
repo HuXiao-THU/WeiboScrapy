@@ -1,13 +1,18 @@
 # This is used to find the frequent patterns in the Weibo data.
 # The input is a directory containing all the Weibo data.
-# The output ... currently unknown.
+# The output is pickle files for later process
 
 import csv
 import os
 import re
 import jieba
+import pickle
+import time
 
-file_dir = './WeiboScrapy/SampleData/'
+
+input_dir = './Weibo_data/processed_data/pandamic'
+keyword = '疫情'    # the keyword of the Weibo
+output_dir = './Weibo_data/FrequentPattern'
 minSupportThreshold = 0.02
 
 # 读取数据集，后面在apriori()中会处理成集合格式
@@ -26,7 +31,7 @@ def loadDataSet(file_name):
             segments = jieba.lcut(line)
             # 预处理中无法清理干净的词
             for i in range(len(segments)-1, -1, -1):
-                if segments[i] in ['原图','组图','的','了','张']:
+                if segments[i] in ['原图','组图','的','了','张','地图','显示','也','就','是','还','着'] or segments[i] == keyword:
                     del segments[i]
             dataSet.append(segments)  
     return dataSet      
@@ -63,7 +68,7 @@ def scanD(D, Ck, minSupport):
         support = ssCnt[key] / numItems
         if support >= minSupport:
             retList.append(key)
-        supportData[key] = support
+            supportData[key] = support
     return retList, supportData # 排除不符合支持度元素后的元素 每个元素支持度
  
 # 生成所有可以组合的元素个数为k的集合
@@ -88,7 +93,7 @@ def apriori(dataSet, minSupport = 0.5):
     D = list(map(set, dataSet)) # 转换列表记录为集合  [{1, 3, 4}, {2, 3, 5}, {1, 2, 3, 5}, {2, 5}]
     C1 = createC1(dataSet)      # 将每个元素转会为frozenset集合
     L1, supportData = scanD(D, C1, minSupport)  # 过滤数据
-    print("L1 finished!")
+    print("L 1 finished!")
     L = [L1]
     k = 2
     while (len(L[k-2]) > 0):    # 若仍有满足支持度的集合则继续
@@ -106,17 +111,29 @@ def testDataSet():
     return [[1,3,4],[2,3,5],[1,2,3,5],[2,5]]
 
 def main():
-    for root, dirs, files in os.walk(file_dir):
+    for root, dirs, files in os.walk(input_dir):
         for _file in files:
-            file_name = root + _file
+            file_name = os.path.join(root, _file)
             # 这里开始对目录下对每个文件进行操作
             dataSet = loadDataSet(file_name)
             print(_file, "loaded!")
             # dataSet = testDataSet()     # for debug
+            start = time.time()
             L, supportData = apriori(dataSet, minSupportThreshold)
-            patterns = [pattern for Lk in L for pattern in Lk]
-            for pattern in patterns:
-                print(tuple(pattern), supportData[pattern])
+            end = time.time()
+            patterns = [pattern for Lk in L for pattern in Lk] # a list of set
+
+            pickle_name = _file[:-4] + '.pickle'
+            pickle_file = os.path.join(output_dir, pickle_name)
+            with open(pickle_file, 'wb') as f:
+                pickle.dump(patterns, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(supportData, f, pickle.HIGHEST_PROTOCOL)
+            print(pickle_name, "saved!\t", end-start, "sec used")
+
+            del dataSet
+            del L
+            del supportData
+            del patterns
 
 if __name__ == '__main__':
     main()
